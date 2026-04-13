@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Refund Policy</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  </head>
+  <body>
+    <main class="container single">
+      <section class="card">
+        <h1>Refund Policy</h1>
+        <p>Please review the refund conditions before making payment.</p>
+        <ul>
+          <li>Tickets once booked are generally non-refundable.</li>
+          <li>Refund may be considered only if event is cancelled by organizer.</li>
+          <li>No refund for no-show, late arrival, or duplicate bookings.</li>
+          <li>In approved refund cases, amount is processed to original payment method.</li>
+          <li>Processing timelines may vary based on payment provider policies.</li>
+        </ul>
+        <a href="{{ url_for('index') }}">Back to Home</a>
+      </section>
+    </main>
+  </body>
+</html>

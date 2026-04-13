@@ -1,0 +1,23 @@
+{
+  "event": {
+    "name": "Vintage Antique Display",
+    "date": "17 May 2026",
+    "time": "4:00 PM - 10:00 PM",
+    "venue_name": "Symbiosis College Ground, Viman Nagar, Pune",
+    "full_address": "Symbiosis College Ground, Viman Nagar, Pune",
+    "google_maps_link": "https://maps.app.goo.gl/9dsNvUY3sfva8Pkg6",
+    "organizer_name": "Smit Gunjal Designs",
+    "contact_number": "+91 97622 82109",
+    "email_id": "n.a",
+    "ticket_price": 299,
+    "receiver_name": "Smit Gunjal"
+  },
+  "razorpay": {
+    "key_id": "rzp_test_Sc6rIL1AIw4SUN",
+    "key_secret": "x56pIqGnjAg7Toz0pSVy7u12"
+  },
+  "employee": {
+    "default_id": "EMP001",
+    "default_password": "change-me-now"
+  }
+}

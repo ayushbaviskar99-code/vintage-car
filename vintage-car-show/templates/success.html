@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Booking Confirmed</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  </head>
+  <body>
+    <main class="container single">
+      <section class="card">
+        <span class="badge success-badge">Payment Verified</span>
+        <h1>Booking Confirmed</h1>
+        <p class="muted">Booking ID: {{ booking.id }} | Amount Paid: INR {{ booking.amount_total }}</p>
+        <p>Save all ticket QR codes safely. Each QR is valid for one-time entry only.</p>
+        <hr />
+        <div class="ticket-list">
+          {% for attendee in attendees %}
+          <div class="ticket-card">
+            <h3>{{ attendee.full_name }}</h3>
+            <p>Mobile: {{ attendee.mobile }} | Age: {{ attendee.age }}</p>
+            <div class="qr-svg">
+              <img src="data:image/svg+xml;base64,{{ attendee.qr_svg_base64 }}" alt="Ticket QR" />
+            </div>
+            <p class="small">Token: {{ attendee.qr_token }}</p>
+          </div>
+          {% endfor %}
+        </div>
+        <a class="primary-btn inline" href="{{ url_for('index') }}">Book More Tickets</a>
+      </section>
+    </main>
+  </body>
+</html>
