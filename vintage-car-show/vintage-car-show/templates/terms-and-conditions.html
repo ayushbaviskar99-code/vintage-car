@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Terms & Conditions</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  </head>
+  <body>
+    <main class="container single">
+      <section class="card">
+        <h1>Terms & Conditions</h1>
+        <p>These terms apply to all bookings for {{ event.name }}.</p>
+        <ul>
+          <li>Each ticket is valid for one person and one-time entry only.</li>
+          <li>Entry is allowed only after successful payment verification.</li>
+          <li>QR tickets must be presented at gate for scanning.</li>
+          <li>Organizer reserves right to deny entry for misconduct or rule violations.</li>
+          <li>Event schedule or arrangements may change due to operational reasons.</li>
+        </ul>
+        <a href="{{ url_for('index') }}">Back to Home</a>
+      </section>
+    </main>
+  </body>
+</html>

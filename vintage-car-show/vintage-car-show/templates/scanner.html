@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ticket Scanner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <script src="https://unpkg.com/html5-qrcode" defer></script>
+  </head>
+  <body>
+    <main class="container single">
+      <section class="card">
+        <div class="top-row">
+          <h1>Scanner Dashboard</h1>
+          <a href="{{ url_for('logout') }}">Logout</a>
+        </div>
+        <span class="badge">Live Gate Validation</span>
+        <p class="small">Logged in as: <strong>{{ employee_id }}</strong></p>
+        <p class="small">Scan each visitor QR code once for valid entry.</p>
+        <div id="reader"></div>
+        <p id="cameraStatus" class="status">Starting camera...</p>
+        <form id="manualScanForm">
+          <label for="manualToken">Manual Token Entry</label>
+          <input id="manualToken" type="text" placeholder="Paste QR token here" required />
+          <button type="submit" class="primary-btn">Validate Ticket</button>
+        </form>
+        <p id="scanResult" class="status"></p>
+      </section>
+    </main>
+    <script src="{{ url_for('static', filename='js/scanner.js') }}"></script>
+  </body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ event.name }} | Booking</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  </head>
+  <body class="booking-page">
+    <main class="booking-shell">
+      <h1 class="page-title">Vintage Car Show Booking Form</h1>
+      <section class="booking-panel">
+        <aside class="left-panel">
+          <h2>What You Get</h2>
+          <ul>
+            <li>Live vintage & antique car showcase access</li>
+            <li>One QR pass generated per person</li>
+            <li>Quick digital payment via Razorpay</li>
+            <li>Fast entry with secure one-time scan</li>
+          </ul>
+          <div class="event-box">
+            <p><strong>Event:</strong> {{ event.name }}</p>
+            <p><strong>Date:</strong> {{ event.date }}</p>
+            <p><strong>Time:</strong> {{ event.time }}</p>
+            <p><strong>Location / Venue:</strong> Symbiosis College Ground, Viman Nagar, Pune</p>
+            <p><a href="https://maps.app.goo.gl/9dsNvUY3sfva8Pkg6" target="_blank" rel="noreferrer">Open location in Google Maps</a></p>
+          </div>
+        </aside>
+
+        <section class="right-panel">
+          <form id="bookingForm" class="section-block">
+            <h3>Personal Details</h3>
+            <div class="grid">
+              <input type="text" id="buyerName" placeholder="Full Name" required />
+              <input type="tel" id="buyerMobile" placeholder="Phone Number" required />
+              <input type="tel" id="buyerWhatsapp" placeholder="WhatsApp Number" required />
+              <input type="number" id="buyerAge" placeholder="Age" min="1" required />
+            </div>
+
+            <h3>Booking Details</h3>
+            <label for="peopleCount">No. of People</label>
+            <input type="number" id="peopleCount" min="1" value="1" required />
+            <p id="totalAmount">Total: INR {{ event.ticket_price }}</p>
+            <div id="attendeesContainer"></div>
+            <button type="submit" class="primary-btn">Submit Booking</button>
+          </form>
+          <p id="statusMessage" class="status"></p>
+        </section>
+      </section>
+      <footer class="legal-footer">
+        <a href="{{ url_for('terms_and_conditions') }}">Terms & Conditions</a>
+        <a href="{{ url_for('privacy_policy') }}">Privacy Policy</a>
+        <a href="{{ url_for('refund_policy') }}">Refund Policy</a>
+        <a href="{{ url_for('contact_us') }}">Contact Us</a>
+      </footer>
+    </main>
+    <script>
+      window.EVENT_DATA = {{ event|tojson }};
+      window.RAZORPAY_KEY_ID = "{{ razorpay_key_id }}";
+    </script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  </body>
+</html>

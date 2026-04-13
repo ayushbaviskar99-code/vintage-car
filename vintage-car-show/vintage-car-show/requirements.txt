@@ -1,0 +1,5 @@
+Flask
+razorpay
+qrcode
+Pillow
+gunicorn

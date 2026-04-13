@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Report</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <style>
+      .report-shell { max-width: 1300px; margin: 20px auto; padding: 0 14px; }
+      .report-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+      .stat-card { background: rgba(0,0,0,.65); border: 1px solid #8c6d45; border-radius: 10px; padding: 12px; }
+      .report-table-wrap { overflow-x: auto; background: rgba(0,0,0,.62); border: 1px solid #8c6d45; border-radius: 10px; }
+      table { width: 100%; border-collapse: collapse; min-width: 1200px; }
+      th, td { border-bottom: 1px solid rgba(140,109,69,.45); padding: 10px; text-align: left; font-size: 13px; }
+      th { color: #f7e4bf; position: sticky; top: 0; background: #111; }
+    </style>
+  </head>
+  <body>
+    <main class="report-shell">
+      <h1>Admin Report</h1>
+      <div class="report-stats">
+        <div class="stat-card"><strong>Paid Tickets:</strong> {{ total_paid }}</div>
+        <div class="stat-card"><strong>Entries Scanned:</strong> {{ total_entries }}</div>
+        <div class="stat-card"><strong>Paid But Not Entered:</strong> {{ pending_entries }}</div>
+      </div>
+
+      <div class="report-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Booking ID</th>
+              <th>Buyer Name</th>
+              <th>Buyer Mobile</th>
+              <th>People</th>
+              <th>Amount</th>
+              <th>Payment Status</th>
+              <th>Payment ID</th>
+              <th>Attendee</th>
+              <th>Attendee Mobile</th>
+              <th>Age</th>
+              <th>QR Token</th>
+              <th>Entry Used</th>
+              <th>Scanned By</th>
+              <th>Scanned At</th>
+              <th>Booked At</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+            <tr>
+              <td>{{ row.booking_id }}</td>
+              <td>{{ row.buyer_name }}</td>
+              <td>{{ row.buyer_mobile }}</td>
+              <td>{{ row.people_count }}</td>
+              <td>INR {{ row.amount_total }}</td>
+              <td>{{ row.payment_status }}</td>
+              <td>{{ row.razorpay_payment_id or "-" }}</td>
+              <td>{{ row.attendee_name }}</td>
+              <td>{{ row.attendee_mobile }}</td>
+              <td>{{ row.attendee_age }}</td>
+              <td>{{ row.qr_token }}</td>
+              <td>{{ "YES" if row.is_used == 1 else "NO" }}</td>
+              <td>{{ row.scanned_by or "-" }}</td>
+              <td>{{ row.scanned_at or "-" }}</td>
+              <td>{{ row.created_at }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy Policy</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  </head>
+  <body>
+    <main class="container single">
+      <section class="card">
+        <h1>Privacy Policy</h1>
+        <p>We collect only the data required for ticket booking and event entry control.</p>
+        <ul>
+          <li>Collected data: name, mobile number, WhatsApp number, age, and booking details.</li>
+          <li>Payment is processed through Razorpay and payment status is recorded.</li>
+          <li>Data is used for ticket generation, check-in verification, and support.</li>
+          <li>We do not sell personal information to third parties.</li>
+          <li>By booking, you consent to this data usage for event operations.</li>
+        </ul>
+        <a href="{{ url_for('index') }}">Back to Home</a>
+      </section>
+    </main>
+  </body>
+</html>
