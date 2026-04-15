@@ -13,8 +13,8 @@
     "receiver_name": "Smit Gunjal"
   },
   "razorpay": {
-    "key_id": "rzp_test_Sc6rIL1AIw4SUN",
-    "key_secret": "x56pIqGnjAg7Toz0pSVy7u12"
+    "key_id": "rzp_live_Sdl0lKXUUX15Dd",
+    "key_secret": "1d1BH49sEUYHMS9wJ2k79OUC"
   },
   "employee": {
     "default_id": "EMP001",

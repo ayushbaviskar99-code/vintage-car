@@ -26,10 +26,7 @@ app.secret_key = secrets.token_hex(32)
 init_db(CONFIG["employee"]["default_id"], CONFIG["employee"]["default_password"])
 
 razorpay_client = None
-if (
-    RAZORPAY_KEY_ID != "YOUR_RAZORPAY_KEY_ID"
-    and RAZORPAY_KEY_SECRET != "YOUR_RAZORPAY_KEY_SECRET"
-):
+if RAZORPAY_KEY_ID.strip() and RAZORPAY_KEY_SECRET.strip():
     razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
 
