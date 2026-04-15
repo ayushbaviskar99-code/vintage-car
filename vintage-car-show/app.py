@@ -161,7 +161,8 @@ def create_order():
                     "currency": "INR",
                     "receipt": f"booking_{booking_id}",
                     "payment_capture": 1,
-                }
+                },
+                timeout=12,
             )
             razorpay_order_id = order["id"]
         except razorpay.errors.BadRequestError:
@@ -174,6 +175,17 @@ def create_order():
                     }
                 ),
                 400,
+            )
+        except Exception:
+            conn.rollback()
+            return (
+                jsonify(
+                    {
+                        "ok": False,
+                        "message": "Unable to connect to Razorpay right now. Check internet or try again in a moment.",
+                    }
+                ),
+                503,
             )
 
         cursor.execute(
