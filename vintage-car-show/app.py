@@ -6,10 +6,9 @@ from pathlib import Path
 
 import qrcode
 import razorpay
+import requests
 from qrcode.image.svg import SvgImage
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
-
-from database import get_connection, init_db
 
 BASE_DIR = Path(__file__).parent
 
@@ -19,15 +18,38 @@ with open(BASE_DIR / "config.json", "r", encoding="utf-8") as config_file:
 EVENT = CONFIG["event"]
 RAZORPAY_KEY_ID = CONFIG["razorpay"]["key_id"]
 RAZORPAY_KEY_SECRET = CONFIG["razorpay"]["key_secret"]
+APPS_SCRIPT_WEBHOOK = CONFIG["google_sheets"]["apps_script_webhook"].strip()
+GOOGLE_SHEET_VIEW_URL = CONFIG["google_sheets"].get("sheet_view_url", "").strip()
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
 
-init_db(CONFIG["employee"]["default_id"], CONFIG["employee"]["default_password"])
-
 razorpay_client = None
 if RAZORPAY_KEY_ID.strip() and RAZORPAY_KEY_SECRET.strip():
     razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+
+
+def sheets_api(action: str, payload: dict):
+    if not APPS_SCRIPT_WEBHOOK:
+        raise ValueError("Google Sheets webhook is missing in config.json")
+
+    body = {"action": action, **payload}
+    response = requests.post(APPS_SCRIPT_WEBHOOK, json=body, timeout=20)
+    response.raise_for_status()
+    return response.json()
+
+
+try:
+    sheets_api(
+        "init",
+        {
+            "default_employee_id": CONFIG["employee"]["default_id"],
+            "default_employee_password": CONFIG["employee"]["default_password"],
+        },
+    )
+except Exception:
+    # Keep app booting even if the webhook is not yet configured.
+    pass
 
 
 def generate_qr_svg(qr_token: str) -> str:
@@ -47,27 +69,18 @@ def generate_qr_svg_base64(qr_token: str) -> str:
 
 
 def build_attendee_payload(booking_id: int):
-    conn = get_connection()
-    attendees = conn.execute(
-        """
-        SELECT id, full_name, mobile, age, qr_token
-        FROM attendees
-        WHERE booking_id = ?
-        ORDER BY id ASC
-        """,
-        (booking_id,),
-    ).fetchall()
-    conn.close()
-
+    result = sheets_api("get_attendees_by_booking", {"booking_id": booking_id})
+    attendees = result.get("attendees", [])
     payload = []
     for attendee in attendees:
+        qr_token = str(attendee.get("qr_token", ""))
         payload.append(
             {
-                "full_name": attendee["full_name"],
-                "mobile": attendee["mobile"],
-                "age": attendee["age"],
-                "qr_token": attendee["qr_token"],
-                "qr_svg_base64": generate_qr_svg_base64(attendee["qr_token"]),
+                "full_name": attendee.get("full_name", ""),
+                "mobile": attendee.get("mobile", ""),
+                "age": attendee.get("age", ""),
+                "qr_token": qr_token,
+                "qr_svg_base64": generate_qr_svg_base64(qr_token),
             }
         )
     return payload
@@ -111,44 +124,8 @@ def create_order():
             503,
         )
 
-    conn = None
-    booking_id = None
     try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            INSERT INTO bookings (
-                buyer_name, buyer_mobile, buyer_whatsapp, buyer_age,
-                people_count, amount_total, payment_status
-            ) VALUES (?, ?, ?, ?, ?, ?, 'pending')
-            """,
-            (
-                buyer["fullName"],
-                buyer["mobile"],
-                buyer["whatsapp"],
-                int(buyer["age"]),
-                people_count,
-                amount_total,
-            ),
-        )
-        booking_id = cursor.lastrowid
-
-        for attendee in attendees:
-            qr_token = f"VCS-{booking_id}-{secrets.token_hex(8)}"
-            cursor.execute(
-                """
-                INSERT INTO attendees (booking_id, full_name, mobile, age, qr_token)
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (
-                    booking_id,
-                    attendee["fullName"],
-                    attendee["mobile"],
-                    int(attendee["age"]),
-                    qr_token,
-                ),
-            )
+        preview_booking_id = secrets.randbelow(900000) + 100000
 
         razorpay_order_id = ""
         try:
@@ -156,14 +133,13 @@ def create_order():
                 {
                     "amount": amount_total * 100,
                     "currency": "INR",
-                    "receipt": f"booking_{booking_id}",
+                    "receipt": f"booking_{preview_booking_id}",
                     "payment_capture": 1,
                 },
                 timeout=12,
             )
             razorpay_order_id = order["id"]
         except razorpay.errors.BadRequestError:
-            conn.rollback()
             return (
                 jsonify(
                     {
@@ -174,7 +150,6 @@ def create_order():
                 400,
             )
         except Exception:
-            conn.rollback()
             return (
                 jsonify(
                     {
@@ -185,18 +160,35 @@ def create_order():
                 503,
             )
 
-        cursor.execute(
-            "UPDATE bookings SET razorpay_order_id = ? WHERE id = ?",
-            (razorpay_order_id, booking_id),
+        attendees_payload = []
+        for attendee in attendees:
+            attendees_payload.append(
+                {
+                    "full_name": attendee["fullName"],
+                    "mobile": attendee["mobile"],
+                    "age": int(attendee["age"]),
+                    "qr_token": f"VCS-{secrets.token_hex(8)}",
+                }
+            )
+
+        create_result = sheets_api(
+            "create_order",
+            {
+                "buyer_name": buyer["fullName"],
+                "buyer_mobile": buyer["mobile"],
+                "buyer_whatsapp": buyer["whatsapp"],
+                "buyer_age": int(buyer["age"]),
+                "people_count": people_count,
+                "amount_total": amount_total,
+                "razorpay_order_id": razorpay_order_id,
+                "attendees": attendees_payload,
+            }
         )
-        conn.commit()
+        booking_id = int(create_result.get("booking_id", 0) or 0)
+        if booking_id < 1:
+            return jsonify({"ok": False, "message": "Could not create order in Google Sheets."}), 500
     except Exception:
-        if conn:
-            conn.rollback()
         return jsonify({"ok": False, "message": "Could not create order. Please try again."}), 500
-    finally:
-        if conn:
-            conn.close()
 
     return jsonify(
         {
@@ -217,18 +209,16 @@ def verify_payment():
     razorpay_payment_id = data.get("razorpay_payment_id")
     razorpay_signature = data.get("razorpay_signature")
 
-    conn = get_connection()
-    booking = conn.execute(
-        "SELECT * FROM bookings WHERE id = ?",
-        (booking_id,),
-    ).fetchone()
+    try:
+        booking_result = sheets_api("get_booking", {"booking_id": booking_id})
+    except Exception:
+        return jsonify({"ok": False, "message": "Google Sheets connection failed."}), 503
 
+    booking = booking_result.get("booking")
     if not booking:
-        conn.close()
         return jsonify({"ok": False, "message": "Booking not found."}), 404
 
     if razorpay_client is None:
-        conn.close()
         return jsonify({"ok": False, "message": "Payment gateway not configured."}), 503
 
     is_verified = False
@@ -245,35 +235,32 @@ def verify_payment():
         is_verified = False
 
     if not is_verified:
-        conn.close()
         return jsonify({"ok": False, "message": "Payment verification failed."}), 400
 
-    conn.execute(
-        """
-        UPDATE bookings
-        SET payment_status = 'paid',
-            razorpay_order_id = ?,
-            razorpay_payment_id = ?
-        WHERE id = ?
-        """,
-        (razorpay_order_id, razorpay_payment_id, booking_id),
-    )
-    conn.commit()
-    conn.close()
+    try:
+        sheets_api(
+            "verify_payment",
+            {
+                "booking_id": booking_id,
+                "razorpay_order_id": razorpay_order_id,
+                "razorpay_payment_id": razorpay_payment_id,
+            },
+        )
+    except Exception:
+        return jsonify({"ok": False, "message": "Unable to update Google Sheets payment status."}), 503
 
     return jsonify({"ok": True, "redirectUrl": url_for("success", booking_id=booking_id)})
 
 
 @app.route("/success/<int:booking_id>")
 def success(booking_id: int):
-    conn = get_connection()
-    booking = conn.execute(
-        "SELECT * FROM bookings WHERE id = ?",
-        (booking_id,),
-    ).fetchone()
-    conn.close()
+    try:
+        booking_result = sheets_api("get_booking", {"booking_id": booking_id})
+    except Exception:
+        return redirect(url_for("index"))
+    booking = booking_result.get("booking")
 
-    if not booking or booking["payment_status"] != "paid":
+    if not booking or booking.get("payment_status") != "paid":
         return redirect(url_for("index"))
 
     attendees = build_attendee_payload(booking_id)
@@ -288,14 +275,12 @@ def employee_login():
     employee_id = request.form.get("employee_id", "").strip()
     password = request.form.get("password", "").strip()
 
-    conn = get_connection()
-    employee = conn.execute(
-        "SELECT employee_id FROM employees WHERE employee_id = ? AND password = ?",
-        (employee_id, password),
-    ).fetchone()
-    conn.close()
+    try:
+        login_result = sheets_api("employee_login", {"employee_id": employee_id, "password": password})
+    except Exception:
+        return render_template("employee-login.html", error="Google Sheets connection failed.")
 
-    if not employee:
+    if not login_result.get("ok"):
         return render_template("employee-login.html", error="Invalid employee ID or password.")
 
     session["employee_id"] = employee_id
@@ -306,7 +291,12 @@ def employee_login():
 def scanner():
     if "employee_id" not in session:
         return redirect(url_for("employee_login"))
-    return render_template("scanner.html", employee_id=session["employee_id"], event=EVENT)
+    return render_template(
+        "scanner.html",
+        employee_id=session["employee_id"],
+        event=EVENT,
+        sheet_view_url=GOOGLE_SHEET_VIEW_URL,
+    )
 
 
 @app.route("/scan-ticket", methods=["POST"])
@@ -318,46 +308,26 @@ def scan_ticket():
     if not qr_token:
         return jsonify({"ok": False, "message": "QR token is required."}), 400
 
-    conn = get_connection()
-    attendee = conn.execute(
-        """
-        SELECT a.id, a.full_name, a.is_used, b.payment_status
-        FROM attendees a
-        JOIN bookings b ON b.id = a.booking_id
-        WHERE a.qr_token = ?
-        """,
-        (qr_token,),
-    ).fetchone()
+    try:
+        scan_result = sheets_api(
+            "scan_ticket",
+            {"qr_token": qr_token, "scanned_by": session["employee_id"]},
+        )
+    except Exception:
+        return jsonify({"ok": False, "message": "Google Sheets connection failed."}), 503
 
-    if not attendee:
-        conn.close()
-        return jsonify({"ok": False, "message": "Invalid ticket QR code."}), 404
-
-    if attendee["payment_status"] != "paid":
-        conn.close()
-        return jsonify({"ok": False, "message": "Payment not confirmed for this ticket."}), 400
-
-    if attendee["is_used"] == 1:
-        conn.close()
-        return jsonify({"ok": False, "message": "This QR code has already been used."}), 409
-
-    conn.execute(
-        """
-        UPDATE attendees
-        SET is_used = 1,
-            scanned_by = ?,
-            scanned_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-        """,
-        (session["employee_id"], attendee["id"]),
-    )
-    conn.commit()
-    conn.close()
+    if not scan_result.get("ok"):
+        message = scan_result.get("message", "Invalid ticket QR code.")
+        if "already" in message.lower():
+            return jsonify({"ok": False, "message": message}), 409
+        if "payment" in message.lower():
+            return jsonify({"ok": False, "message": message}), 400
+        return jsonify({"ok": False, "message": message}), 404
 
     return jsonify(
         {
             "ok": True,
-            "message": f"Entry allowed for {attendee['full_name']}. Ticket marked as used and cannot be scanned again.",
+            "message": f"Entry allowed for {scan_result.get('full_name', 'Guest')}. Ticket marked as used and cannot be scanned again.",
         }
     )
 
@@ -370,35 +340,23 @@ def logout():
 
 @app.route("/admin-report")
 def admin_report():
-    conn = get_connection()
-    rows = conn.execute(
-        """
-        SELECT
-            b.id AS booking_id,
-            b.buyer_name,
-            b.buyer_mobile,
-            b.people_count,
-            b.amount_total,
-            b.payment_status,
-            b.razorpay_payment_id,
-            b.created_at,
-            a.full_name AS attendee_name,
-            a.mobile AS attendee_mobile,
-            a.age AS attendee_age,
-            a.qr_token,
-            a.is_used,
-            a.scanned_by,
-            a.scanned_at
-        FROM bookings b
-        JOIN attendees a ON a.booking_id = b.id
-        ORDER BY b.id DESC, a.id ASC
-        """
-    ).fetchall()
-    conn.close()
-
+    try:
+        report_result = sheets_api("admin_report", {})
+    except Exception:
+        return render_template(
+            "admin-report.html",
+            rows=[],
+            total_paid=0,
+            total_entries=0,
+            pending_entries=0,
+        )
+    rows = report_result.get("rows", [])
+    rows.sort(key=lambda row: (-int(row.get("booking_id", 0) or 0), str(row.get("qr_token", ""))))
     total_paid = sum(1 for row in rows if row["payment_status"] == "paid")
-    total_entries = sum(1 for row in rows if row["is_used"] == 1)
-    pending_entries = sum(1 for row in rows if row["payment_status"] == "paid" and row["is_used"] == 0)
+    total_entries = sum(1 for row in rows if int(row.get("is_used", 0) or 0) == 1)
+    pending_entries = sum(
+        1 for row in rows if row["payment_status"] == "paid" and int(row.get("is_used", 0) or 0) == 0
+    )
 
     return render_template(
         "admin-report.html",

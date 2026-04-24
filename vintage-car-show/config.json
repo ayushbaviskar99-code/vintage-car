@@ -16,6 +16,10 @@
     "key_id": "rzp_live_Sdl0lKXUUX15Dd",
     "key_secret": "1d1BH49sEUYHMS9wJ2k79OUC"
   },
+  "google_sheets": {
+    "apps_script_webhook": "https://script.google.com/macros/s/AKfycbykwLYlBocYXshrBqJkJBPzDXWUdwF5CXjdc5K73cDOW7m8zVPLg5-kfUdOY5AT6tdn/exec",
+    "sheet_view_url": "https://docs.google.com/spreadsheets/d/1xm8bn7Zcgi5dKLnxavrAAeUDDkH0wuAR4yfZCNSXobM/edit?usp=sharing"
+  },
   "employee": {
     "default_id": "EMP001",
     "default_password": "change-me-now"

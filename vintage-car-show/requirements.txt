@@ -3,3 +3,4 @@ razorpay
 qrcode
 Pillow
 gunicorn
+requests

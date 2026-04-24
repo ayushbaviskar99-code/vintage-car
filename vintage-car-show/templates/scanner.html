@@ -12,7 +12,12 @@
       <section class="card">
         <div class="top-row">
           <h1>Scanner Dashboard</h1>
-          <a href="{{ url_for('logout') }}">Logout</a>
+          <div>
+            {% if sheet_view_url %}
+            <a href="{{ sheet_view_url }}" target="_blank" rel="noopener noreferrer" style="margin-right: 10px;">View Google Sheet</a>
+            {% endif %}
+            <a href="{{ url_for('logout') }}">Logout</a>
+          </div>
         </div>
         <span class="badge">Live Gate Validation</span>
         <p class="small">Logged in as: <strong>{{ employee_id }}</strong></p>
